@@ -1,0 +1,71 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Documentación Matemática: Backend Bowmasters Educativo}
+\author{Proyecto QuizMate - Matemáticas 3}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introducción}
+Este documento detalla el modelo matemático implementado en el backend autoritativo del juego QuizMate, basado en los conceptos de la materia Matemáticas 3. El juego utiliza un motor de física parabólica para validar disparos y calcular daños.
+
+\section{Modelo de Trayectoria Parabólica}
+El proyectil se modela mediante funciones vectoriales paramétricas:
+\begin{equation}
+x(t) = x_0 + (v_0 \cos \theta + v_{viento}) t
+\end{equation}
+\begin{equation}
+y(t) = y_0 + (v_0 \sin \theta) t - \frac{1}{2} g t^2
+\end{equation}
+
+Donde:
+\begin{itemize}
+    \item $v_0$: Velocidad inicial.
+    \item $\theta$: Ángulo de lanzamiento.
+    \item $g$: Gravedad ($9.8 m/s^2$).
+    \item $v_{viento}$: Velocidad del viento horizontal.
+\end{itemize}
+
+\section{Análisis de Sensibilidad (Derivadas Parciales)}
+Para entender cómo afectan los cambios en las variables de entrada al alcance horizontal ($R$), se calculan las derivadas parciales de la función de alcance:
+\begin{equation}
+R(v, \theta) = \frac{v^2 \sin(2\theta)}{g}
+\end{equation}
+
+\subsection{Sensibilidad respecto a la velocidad}
+\begin{equation}
+\frac{\partial R}{\partial v} = \frac{2v \sin(2\theta)}{g}
+\end{equation}
+Esta derivada indica cuánto aumenta el alcance por cada unidad de incremento en la velocidad inicial.
+
+\subsection{Sensibilidad respecto al ángulo}
+\begin{equation}
+\frac{\partial R}{\partial \theta} = \frac{2v^2 \cos(2\theta)}{g}
+\end{equation}
+Nota: Cuando $\theta = 45^\circ$, $\cos(90^\circ) = 0$, lo que confirma que el alcance es máximo en ese punto (punto crítico).
+
+\section{Detección de Impacto y Daño}
+Se utiliza la distancia euclidiana entre el punto de impacto $(x_i, y_i)$ y la posición del objetivo $(x_t, y_t)$:
+\begin{equation}
+D = \sqrt{(x_i - x_t)^2 + (y_i - y_t)^2}
+\end{equation}
+
+El daño se modela como una función decreciente de la distancia:
+\begin{equation}
+Daño(D) = Base \times \left(1 - \frac{D}{Radio}\right)
+\end{equation}
+
+\section{Dinámica de Empuje (Knockback)}
+Siguiendo los principios de conservación de movimiento simplificados, el impacto genera un desplazamiento en la posición del objetivo:
+\begin{equation}
+x_{nueva} = x_{actual} + \text{Dirección} \times (Daño \times K)
+\end{equation}
+Donde $K$ es la constante de empuje.
+
+\end{document}

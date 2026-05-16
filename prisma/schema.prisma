@@ -1,0 +1,200 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum GameStatus {
+  WAITING
+  READY
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum MatchmakingStatus {
+  QUEUED
+  MATCHED
+  CANCELLED
+  EXPIRED
+}
+
+enum RewardType {
+  COINS
+  CHEST
+  ACHIEVEMENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  wins         Int      @default(0)
+  losses       Int      @default(0)
+  coins        Int      @default(0)
+  selectedCharacterId String?
+  selectedWeaponId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  gamePlayers  GamePlayer[]
+  shots         Shot[]
+  leaderboard  Leaderboard?
+  rewards       Reward[]
+  achievements  UserAchievement[]
+}
+
+model Character {
+  id          String @id @default(cuid())
+  code        String @unique
+  name        String
+  avatarUrl   String?
+  baseHealth  Int    @default(100)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Weapon {
+  id          String @id @default(cuid())
+  code        String @unique
+  name        String
+  baseDamage  Int    @default(35)
+  hitRadius   Float  @default(35)
+  maxVelocity Float  @default(150)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Game {
+  id                String     @id @default(cuid())
+  status            GameStatus @default(WAITING)
+  currentTurnUserId String?
+  winnerUserId      String?
+  gravity           Float      @default(9.8)
+  wind              Float      @default(0)
+  round             Int        @default(1)
+  maxRounds         Int        @default(20)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  players           GamePlayer[]
+  shots             Shot[]
+  rewards           Reward[]
+}
+
+model GamePlayer {
+  id          String   @id @default(cuid())
+  gameId      String
+  userId      String
+  characterId String?
+  weaponId    String?
+  positionX   Float
+  positionY   Float   @default(0)
+  health      Int     @default(100)
+  maxHealth   Int     @default(100)
+  isReady     Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  game        Game @relation(fields: [gameId], references: [id])
+  user        User @relation(fields: [userId], references: [id])
+
+  @@unique([gameId, userId])
+}
+
+model Shot {
+  id               String   @id @default(cuid())
+  gameId           String
+  shooterUserId    String
+  targetUserId     String
+  weaponId         String?
+  velocity         Float
+  angleDegrees     Float
+  angleRadians     Float
+  direction        Int
+  gravity          Float
+  wind             Float
+  originX          Float
+  originY          Float
+  targetX          Float
+  targetY          Float
+  impactX          Float
+  impactY          Float
+  distanceToTarget Float
+  damage           Int
+  isHit            Boolean
+  mathAnalysisJson Json?
+  createdAt        DateTime @default(now())
+
+  game             Game @relation(fields: [gameId], references: [id])
+  shooter          User @relation(fields: [shooterUserId], references: [id])
+}
+
+model Leaderboard {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  wins      Int      @default(0)
+  losses    Int      @default(0)
+  elo       Int      @default(1000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+model MatchmakingTicket {
+  id        String @id @default(cuid())
+  userId    String
+  status    MatchmakingStatus @default(QUEUED)
+  gameId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reward {
+  id        String @id @default(cuid())
+  userId    String
+  gameId    String?
+  type      RewardType
+  amount    Int @default(0)
+  claimed   Boolean @default(false)
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User @relation(fields: [userId], references: [id])
+  game      Game? @relation(fields: [gameId], references: [id])
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  code        String @unique
+  name        String
+  description String
+  coinsReward Int @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user          User @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+}
