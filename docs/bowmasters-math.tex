@@ -1,71 +1,158 @@
-\documentclass{article}
+\documentclass[12pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
-\usepackage{amsmath}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amsfonts, amssymb}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
 
-\title{Documentación Matemática: Backend Bowmasters Educativo}
-\author{Proyecto QuizMate - Matemáticas 3}
+\pgfplotsset{compat=1.18}
+\geometry{left=2.5cm, right=2.5cm, top=3cm, bottom=3cm}
+
+\title{\textbf{Documentación Matemática y Sustentación}\\ \Large Backend Autoritativo: Proyecto QuizMate (Bowmasters)}
+\author{\textbf{Desarrollador Backend} \\ Asignatura: Matemáticas 3}
 \date{\today}
 
 \begin{document}
 
 \maketitle
+\tableofcontents
+\newpage
 
-\section{Introducción}
-Este documento detalla el modelo matemático implementado en el backend autoritativo del juego QuizMate, basado en los conceptos de la materia Matemáticas 3. El juego utiliza un motor de física parabólica para validar disparos y calcular daños.
+\section{Introducción: El Papel de las Matemáticas en los Videojuegos}
+El desarrollo del backend de QuizMate (estilo Bowmasters) no se limita al simple intercambio de datos por red. Para garantizar que el juego sea justo, determinista y a prueba de trampas, se implementó un \textbf{servidor autoritativo}. Esto significa que \textit{toda} la física y \textit{todas} las matemáticas suceden en el backend. 
 
-\section{Modelo de Trayectoria Parabólica}
-El proyectil se modela mediante funciones vectoriales paramétricas:
+Este documento formaliza el marco teórico de Cálculo Multivariado, Álgebra Vectorial y Física Cinemática utilizado para dar vida al motor del juego.
+
+\section{1. Modelado de la Trayectoria (Ecuaciones Paramétricas)}
+El movimiento de las armas arrojadas (Lanzas, Bisturís, etc.) se modela en 2D ignorando temporalmente la fricción del aire, pero incluyendo variables externas como el \textbf{viento}. Utilizamos funciones paramétricas vectoriales donde las coordenadas $(x, y)$ dependen del tiempo $t$.
+
+Dadas las condiciones iniciales de velocidad $v_0$ y ángulo $\theta$:
 \begin{equation}
-x(t) = x_0 + (v_0 \cos \theta + v_{viento}) t
-\end{equation}
-\begin{equation}
-y(t) = y_0 + (v_0 \sin \theta) t - \frac{1}{2} g t^2
+\vec{r}(t) = \begin{pmatrix} x(t) \\ y(t) \end{pmatrix} = \begin{pmatrix} x_0 + (v_0 \cos \theta + v_{viento}) t \\ y_0 + (v_0 \sin \theta) t - \frac{1}{2} g t^2 \end{pmatrix}
 \end{equation}
 
-Donde:
-\begin{itemize}
-    \item $v_0$: Velocidad inicial.
-    \item $\theta$: Ángulo de lanzamiento.
-    \item $g$: Gravedad ($9.8 m/s^2$).
-    \item $v_{viento}$: Velocidad del viento horizontal.
-\end{itemize}
+\subsection{Representación Gráfica de la Trayectoria}
+En la siguiente gráfica vemos cómo el vector velocidad inicial se descompone y cómo la gravedad frena el ascenso, generando una parábola.
 
-\section{Análisis de Sensibilidad (Derivadas Parciales)}
-Para entender cómo afectan los cambios en las variables de entrada al alcance horizontal ($R$), se calculan las derivadas parciales de la función de alcance:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    width=10cm, height=6cm,
+    axis lines=middle,
+    xmin=0, xmax=100,
+    ymin=0, ymax=40,
+    xlabel={$x$ (distancia)},
+    ylabel={$y$ (altura)},
+    domain=0:90,
+    samples=100,
+    title={Trayectoria Parabólica sin viento ($v_0 = 30$, $\theta = 45^\circ$)}
+]
+% Parábola: y = x*tan(theta) - (g*x^2)/(2*v^2*cos^2(theta))
+% Usando g=9.8, v0=30, theta=45 -> tan(45)=1, cos^2(45)=0.5
+% y = x - (9.8 * x^2) / (2 * 900 * 0.5) = x - (9.8 * x^2)/900 = x - 0.0108*x^2
+\addplot [blue, thick] {x - 0.0108*x^2};
+
+% Vectores
+\draw[->, red, thick] (axis cs:0,0) -- (axis cs:21.21, 21.21) node[anchor=south west] {$\vec{v}_0$};
+\draw[dashed] (axis cs:0,0) -- (axis cs:21.21, 0) node[midway, below] {$v_x$};
+\draw[dashed] (axis cs:21.21,0) -- (axis cs:21.21, 21.21) node[midway, right] {$v_y$};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{2. Optimización y Derivadas Parciales (Análisis de Sensibilidad)}
+Uno de los retos de diseño del juego es el balanceo de las armas. ¿Qué afecta más al alcance de un disparo: aumentar un 1\% la fuerza o cambiar 1 grado el ángulo?
+Para resolver esto, aplicamos \textbf{Derivadas Parciales} sobre la función de alcance horizontal máximo $R$.
+
+Asumiendo $y_{final} = y_{inicial} = 0$ y viento nulo, el alcance es:
 \begin{equation}
 R(v, \theta) = \frac{v^2 \sin(2\theta)}{g}
 \end{equation}
 
-\subsection{Sensibilidad respecto a la velocidad}
+\subsection{Gradiente $\nabla R$}
+Calculamos el gradiente para encontrar la dirección de máxima variación:
+\begin{equation}
+\nabla R = \left\langle \frac{\partial R}{\partial v}, \frac{\partial R}{\partial \theta} \right\rangle
+\end{equation}
+
+\textbf{1. Sensibilidad respecto a la velocidad:}
 \begin{equation}
 \frac{\partial R}{\partial v} = \frac{2v \sin(2\theta)}{g}
 \end{equation}
-Esta derivada indica cuánto aumenta el alcance por cada unidad de incremento en la velocidad inicial.
+\textit{Interpretación:} El alcance crece de forma lineal respecto al cambio de velocidad (dependiendo de la velocidad actual).
 
-\subsection{Sensibilidad respecto al ángulo}
+\textbf{2. Sensibilidad respecto al ángulo:}
 \begin{equation}
 \frac{\partial R}{\partial \theta} = \frac{2v^2 \cos(2\theta)}{g}
 \end{equation}
-Nota: Cuando $\theta = 45^\circ$, $\cos(90^\circ) = 0$, lo que confirma que el alcance es máximo en ese punto (punto crítico).
+\textit{Interpretación y Optimización:} Para encontrar el alcance máximo, igualamos esta derivada a cero. $\cos(2\theta) = 0 \implies 2\theta = 90^\circ \implies \theta = 45^\circ$. Esto prueba matemáticamente que en nuestro juego, el ángulo óptimo para máximo daño a distancia es $45^\circ$.
 
-\section{Detección de Impacto y Daño}
-Se utiliza la distancia euclidiana entre el punto de impacto $(x_i, y_i)$ y la posición del objetivo $(x_t, y_t)$:
+\section{3. Álgebra Vectorial: Detección de Colisiones (Hitbox)}
+Dado que es un servidor backend, no tenemos un motor de colisiones físico complejo (como Box2D). Las colisiones se calculan midiendo la norma del vector que une el punto de impacto $P_i(x_i, y_i)$ con el centro del oponente $P_t(x_t, y_t)$.
+
 \begin{equation}
-D = \sqrt{(x_i - x_t)^2 + (y_i - y_t)^2}
+\vec{D} = P_i - P_t = \langle x_i - x_t, y_i - y_t \rangle
+\end{equation}
+\begin{equation}
+||\vec{D}|| = \sqrt{(x_i - x_t)^2 + (y_i - y_t)^2}
 \end{equation}
 
-El daño se modela como una función decreciente de la distancia:
-\begin{equation}
-Daño(D) = Base \times \left(1 - \frac{D}{Radio}\right)
-\end{equation}
+Si $||\vec{D}|| \leq Radio_{arma}$, se registra un impacto válido.
 
-\section{Dinámica de Empuje (Knockback)}
-Siguiendo los principios de conservación de movimiento simplificados, el impacto genera un desplazamiento en la posición del objetivo:
-\begin{equation}
-x_{nueva} = x_{actual} + \text{Dirección} \times (Daño \times K)
-\end{equation}
-Donde $K$ es la constante de empuje.
+\begin{center}
+\begin{tikzpicture}
+    % Objetivo
+    \filldraw[color=red!60, fill=red!5, thick](0,0) circle (2);
+    \filldraw[black] (0,0) circle (2pt) node[anchor=north] {Objetivo ($P_t$)};
+    
+    % Impacto
+    \filldraw[blue] (1.2, 1.2) circle (2pt) node[anchor=south west] {Impacto ($P_i$)};
+    
+    % Vector distancia
+    \draw[->, thick, dashed] (0,0) -- (1.2, 1.2) node[midway, above left] {$||\vec{D}||$};
+    
+    % Radio
+    \draw[->, thick] (0,0) -- (2,0) node[midway, below] {$Radio$};
+\end{tikzpicture}
+\end{center}
+
+\newpage
+
+% ==========================================================
+% DISCURSO PARA EL ESTUDIANTE
+% ==========================================================
+\section{Discurso de Sustentación (Guión para el Backend Developer)}
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black,title=\textbf{Instrucciones para el estudiante}]
+Lee, adapta y practica este discurso para tu presentación. Está diseñado para impresionar al profesor de Matemáticas 3 demostrando que \textit{no solo programaste}, sino que \textit{aplicaste el cálculo multivariado} en tu código.
+\end{tcolorbox}
+
+\textbf{[Saludo y Rol]} \\
+``Hola a todos. En este proyecto, mi rol fue ser el \textbf{Desarrollador del Backend Autoritativo}. Mi trabajo consistió en asegurar que el juego sea justo y que los cálculos no dependan de la computadora del jugador, evitando trampas. Para lograrlo, construí un motor de física desde cero en el servidor de Node.js, basándome estrictamente en los conceptos de Matemáticas 3.''
+
+\vspace{0.5cm}
+\textbf{[Sobre la Trayectoria - Tema: Ecuaciones Paramétricas]} \\
+``El primer reto matemático fue simular el disparo. En lugar de usar herramientas pre-hechas, modelé la trayectoria del proyectil utilizando \textbf{funciones vectoriales paramétricas} que dependen del tiempo $t$. Programé el backend para recibir la velocidad y el ángulo que envía el jugador, descomponer ese vector inicial en sus componentes $X$ y $Y$ usando senos y cosenos, y generar una matriz de puntos en una parábola, restando la aceleración de la gravedad en el eje Y. Esta matriz de coordenadas es la que le envío al Frontend para que simplemente dibuje la animación.''
+
+\vspace{0.5cm}
+\textbf{[Sobre el Análisis de Sensibilidad - Tema: Derivadas Parciales]} \\
+``Pero no quería quedarme solo en la física básica. Para darle un verdadero enfoque de \textit{Cálculo Multivariado}, implementé en el código un algoritmo de \textbf{Análisis de Sensibilidad usando Derivadas Parciales}. 
+
+En el código, calculo en tiempo real la derivada parcial del alcance respecto a la velocidad ($\frac{\partial R}{\partial v}$) y respecto al ángulo ($\frac{\partial R}{\partial \theta}$). 
+
+¿Para qué sirve esto en un juego? Sirve para el \textbf{balanceo de armas}. Estas derivadas me dicen matemáticamente cómo reacciona el juego a nivel de micro-ajustes. Incluso, gracias a la derivada del ángulo, pudimos demostrar el punto crítico del juego, comprobando analíticamente que al igualar a cero la derivada $\frac{\partial R}{\partial \theta}$, el ángulo de alcance máximo se encuentra exactamente a los 45 grados, donde la tangente a la curva de sensibilidad es plana.''
+
+\vspace{0.5cm}
+\textbf{[Sobre las Colisiones - Tema: Normas y Distancias Vectoriales]} \\
+``Finalmente, para saber si el jugador acertó o falló el disparo, utilicé \textbf{álgebra vectorial}. El servidor toma el vector posición del impacto y el vector posición del enemigo. Restando estos dos vectores y calculando su \textbf{norma} o magnitud (la distancia euclidiana), puedo saber a cuántos metros cayó el arma. Si esa magnitud es menor al radio de explosión del arma, el servidor aprueba el impacto, calcula una función de decaimiento para el daño, y empuja al enemigo hacia atrás. Todo de forma matemática y segura.''
+
+\vspace{0.5cm}
+\textbf{[Cierre]} \\
+``En conclusión, el backend de QuizMate no es solo una base de datos; es un motor matemático en la nube donde cada petición HTTP dispara operaciones de cálculo multivariado en milisegundos, demostrando que Matemáticas 3 es la base sobre la cual se construyen las lógicas de simulación modernas. Muchas gracias.''
 
 \end{document}
